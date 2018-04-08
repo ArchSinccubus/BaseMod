@@ -17,38 +17,85 @@ import javassist.CannotCompileException;
 import javassist.CtBehavior;
 
 
-@SpirePatch(cls="com.megacrit.cardcrawl.helpers.CardLibrary", method="getColorSpecificCard",paramtypes={"PlayerClass"})
 public class getColorSpecificCardPatch {
 
 
-    @SpireInsertPatch()
-    public static AbstractCard Insert(AbstractPlayer.PlayerClass __class_instance, Random __rand)
-    {
-        ArrayList<String> tmp2 = new ArrayList();
-        Iterator var4;
-        Map.Entry d;
+    @SpirePatch(cls = "com.megacrit.cardcrawl.helpers.CardLibrary", method = "getColorSpecificCard",
+            paramtypes = {
+                    "com.megacrit.cardcrawl.characters.AbstractPlayer$PlayerClass",
+                    "com.megacrit.cardcrawl.random.Random"})
+    public static class PlayerClassArg {
 
-        var4 = CardLibrary.cards.entrySet().iterator();
-
-        while(var4.hasNext()) {
-            d = (Map.Entry)var4.next();
-            if (((AbstractCard)d.getValue()).color.toString() == BaseMod.getColor(__class_instance.name())) {
-                tmp2.add(d.getKey().toString());
+        @SpireInsertPatch(localvars = {"tmp"})
+        public void Insert(AbstractPlayer.PlayerClass chosenClass, Random rand, ArrayList<String> tmp) {
+            for (Map.Entry<String, AbstractCard> c : CardLibrary.cards.entrySet()) {
+                // and check if the color of the card matches what BaseMod says the color should be for the chosenClass
+                if (((AbstractCard) c.getValue()).color.toString().equals(BaseMod.getColor(chosenClass.toString()))) {
+                    tmp.add(c.getKey());
+                }
             }
         }
 
-        return (AbstractCard)CardLibrary.cards.get(tmp2.get(__rand.random(0, tmp2.size() - 1)));
+        public static class Locator extends SpireInsertLocator {
+
+            // increments all values in originalArr by offset
+            private static int[] offset(int[] originalArr, int offset) {
+                int[] resultArr = new int[originalArr.length];
+                for (int i = 0; i < originalArr.length; i++) {
+                    resultArr[i] = originalArr[i] + offset;
+                }
+                return resultArr;
+            }
+
+            public int[] Locate(CtBehavior ctMethodToPatch) throws CannotCompileException, PatchingException {
+                // this matcher matches a new expression, in this case specifically `new ArrayList()`
+                Matcher finalMatcher = new Matcher.NewExprMatcher(ArrayList.class.getName());
+
+                // offset by 1 to insert at the line after the arraylist is created
+                return offset(LineFinder.findInOrder(ctMethodToPatch, new ArrayList<Matcher>(), finalMatcher), 1);
+            }
+        }
+
     }
 
-    public static class Locator extends SpireInsertLocator {
-        public int[] Locate(CtBehavior ctMethodToPatch) throws CannotCompileException, PatchingException {
-            Matcher finalMatcher = new Matcher.MethodCallMatcher(
-                    SpriteBatch.class.getName(), "return");
+    @SpirePatch(cls = "com.megacrit.cardcrawl.helpers.CardLibrary", method = "getColorSpecificCard",
+            paramtypes = {
+                    // the $ means it's an inner class, basically the PlayerClass enum is an inner class of AbstractPlayer
+                    // paramtypes requires the **fully qualified** name
+                    "com.megacrit.cardcrawl.cards.AbstractCard$CardColor",
+                    "com.megacrit.cardcrawl.random.Random"})
+    public static class CardColorArg {
 
-            int [] list = LineFinder.findInOrder(ctMethodToPatch, new ArrayList<Matcher>(), finalMatcher);
-            int [] actualList = new int[] {list[list.length - 1]};
-            return actualList;
+        // capture the tmp local variable so we can add cards to the list of cards that the getColorSpecificCard function returns
+        @SpireInsertPatch(localvars = {"tmp"})
+        public static void Insert(AbstractCard.CardColor color, Random rand, ArrayList<String> tmp) {
+            // just iterate over all the cards in the CardLibrary
+            for (Map.Entry<String, AbstractCard> c : CardLibrary.cards.entrySet()) {
+                // and check if the color of the card matches what color we've been passed
+                if (((AbstractCard) c.getValue()).color.toString().equals(color.toString())) {
+                    tmp.add(c.getKey());
+                }
+            }
+        }
+
+        public static class Locator extends SpireInsertLocator {
+
+            // increments all values in originalArr by offset
+            private static int[] offset(int[] originalArr, int offset) {
+                int[] resultArr = new int[originalArr.length];
+                for (int i = 0; i < originalArr.length; i++) {
+                    resultArr[i] = originalArr[i] + offset;
+                }
+                return resultArr;
+            }
+
+            public int[] Locate(CtBehavior ctMethodToPatch) throws CannotCompileException, PatchingException {
+                // this matcher matches a new expression, in this case specifically `new ArrayList()`
+                Matcher finalMatcher = new Matcher.NewExprMatcher(ArrayList.class.getName());
+
+                // offset by 1 to insert at the line after the arraylist is created
+                return offset(LineFinder.findInOrder(ctMethodToPatch, new ArrayList<Matcher>(), finalMatcher), 1);
+            }
         }
     }
-
 }

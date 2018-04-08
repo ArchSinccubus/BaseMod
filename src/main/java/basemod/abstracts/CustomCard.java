@@ -9,45 +9,95 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
 import com.megacrit.cardcrawl.cards.AbstractCard;
 import com.megacrit.cardcrawl.characters.AbstractPlayer;
+import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
 import com.megacrit.cardcrawl.monsters.AbstractMonster;
 
 import basemod.ReflectionHacks;
 
 public abstract class CustomCard extends AbstractCard {
-	
-	public static HashMap<String, Texture> imgMap;
-	
-	public static final String PORTRAIT_ENDING = "_p";
-	
-	public static Texture getPortraitImage(CustomCard card) {
-		int endingIndex = card.textureImg.lastIndexOf(".");
-		String newPath = card.textureImg.substring(0, endingIndex) + 
-				PORTRAIT_ENDING + card.textureImg.substring(endingIndex); 
-		System.out.println("Finding texture: " + newPath);
-		Texture portraitTexture;
-		try {
-			portraitTexture = new Texture(newPath);
-		} catch (Exception e) {
-			portraitTexture = null;
-		}
-		return portraitTexture;
-	}
-	
-	static {
-		imgMap = new HashMap<>();
-	}
-	
-	public String textureImg;
-	
-	public CustomCard(String id, String name, String img, int cost, String rawDescription, CardType type, CardColor color, CardRarity rarity, CardTarget target, int cardPool) {
-		super(id, name, "status/beta", "status/beta", cost, rawDescription, type, color, rarity, target, cardPool);
-		
-		this.textureImg = img;
-		if (img != null) {
-			loadCardImage(img);
-		}
-	}
-	
+
+    public static HashMap<String, Texture> imgMap;
+
+    public static final String PORTRAIT_ENDING = "_p";
+
+    public PaymentType payment;
+    public String powerName;
+
+    public static Texture getPortraitImage(CustomCard card) {
+        int endingIndex = card.textureImg.lastIndexOf(".");
+        String newPath = card.textureImg.substring(0, endingIndex) +
+                PORTRAIT_ENDING + card.textureImg.substring(endingIndex);
+        System.out.println("Finding texture: " + newPath);
+        Texture portraitTexture;
+        try {
+            portraitTexture = new Texture(newPath);
+        } catch (Exception e) {
+            portraitTexture = null;
+        }
+        return portraitTexture;
+    }
+
+    static {
+        imgMap = new HashMap<>();
+    }
+
+    public String textureImg;
+
+    public CustomCard(String id, String name, String img, int cost, String rawDescription, CardType type, CardColor color, CardRarity rarity, CardTarget target, int cardPool) {
+        super(id, name, "status/beta", "status/beta", cost, rawDescription, type, color, rarity, target, cardPool);
+
+        this.payment = PaymentType.ENERGY;
+        this.textureImg = img;
+        if (img != null) {
+            loadCardImage(img);
+        }
+    }
+
+    public CustomCard(String id, String name, String img, int cost, String rawDescription, CardType type, CardColor color, CardRarity rarity, CardTarget target, int cardPool, PaymentType payment) {
+        super(id, name, "status/beta", "status/beta", cost, rawDescription, type, color, rarity, target, cardPool);
+
+        this.payment = payment;
+        this.textureImg = img;
+        if (img != null) {
+            loadCardImage(img);
+        }
+    }
+
+    public CustomCard(String id, String name, String img, int cost, String rawDescription, CardType type, CardColor color, CardRarity rarity, CardTarget target, int cardPool, PaymentType payment, String powerPayment) {
+        super(id, name, "status/beta", "status/beta", cost, rawDescription, type, color, rarity, target, cardPool);
+
+        this.payment = payment;
+        this.powerName = powerPayment;
+        this.textureImg = img;
+        if (img != null) {
+            loadCardImage(img);
+        }
+    }
+
+    public boolean CheckPowerForPayment(String powerName)
+    {
+        if (!AbstractDungeon.player.hasPower(powerName))
+            return false;
+        else
+        {
+            if (!(AbstractDungeon.player.getPower(powerName).amount < this.costForTurn))
+            {
+             return false;
+            }
+        }
+            return true;
+    }
+
+    public void customPay()
+    {
+
+    }
+
+    public boolean checkCustomPay()
+    {
+        return true;
+    }
+
 	/**
 	 * To be overriden in subclasses if they want to manually modify their card's damage
 	 * like PerfectedStrike or HeavyBlade before any other powers get to modify the damage
@@ -89,4 +139,15 @@ public abstract class CustomCard extends AbstractCard {
 	{
 		return null;
 	}
+
+    public static enum PaymentType {
+        ENERGY,
+        HP,
+        GOLD,
+        POWER,
+        CUSTOM;
+
+        private PaymentType() {
+        }
+    }
 }
